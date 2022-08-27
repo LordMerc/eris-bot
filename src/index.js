@@ -4,6 +4,7 @@ const bot = Eris(`Bot ${process.env.DISCORD_TOKEN}`);
 bot.on('ready', () => console.log(`Logged in as ${bot.user.username}#${bot.user.discriminator}`));
 
 bot.on('messageCreate', (message) => {
+	console.log('got it!')
 	if (message.content === '!ping') {
 		bot.createMessage(message.channel.id, 'Pong!');
 	} else if (message.content === '!Hello') {
