@@ -48,6 +48,7 @@ bot.on('ready', async () => {
 
         bot.createCommand({
             name: "Test Message Menu",
+			description: "Testing message menu?",
             type: Constants.ApplicationCommandTypes.MESSAGE
         }); //Create a message context menu
 
