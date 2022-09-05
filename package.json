@@ -8,6 +8,6 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
-    "eris": "^0.15.1"
+    "eris": "^0.17.0"
   }
 }
