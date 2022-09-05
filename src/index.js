@@ -1,5 +1,5 @@
 const Eris = require('eris');
-const bot = new Eris(`Bot ${process.env.DISCORD_TOKEN}`, {intents : []});
+const bot = new Eris(`${process.env.DISCORD_TOKEN}`, {intents : []});
 const Constants = Eris.Constants;
 
 bot.on('ready', async () => {
