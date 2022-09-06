@@ -1,98 +1,83 @@
-const Eris = require('eris');
-const bot = new Eris(`${process.env.DISCORD_TOKEN}`, {intents : []});
-const Constants = Eris.Constants;
+// Require the necessary discord.js classes
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 
-bot.on('ready', async () => {
-	console.log(`Logged in as ${bot.user.username}#${bot.user.discriminator}`)
-	const commands = await bot.getCommands();
+// Create a new client instance
+const client = new Client({ intents: [GatewayIntentBits.Guilds], partials: [Partials.Message, Partials.Channel, Partials.Reaction] });
 
-    if(!commands.length) {
-        bot.createCommand({
-            name: "test_chat_input",
-            description: "Test command to show how to make commands",
-            options: [ //An array of Chat Input options https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-structure
-                {
-                    "name": "animal", //The name of the option
-                    "description": "The type of animal",
-                    "type": Constants.ApplicationCommandOptionTypes.STRING, //This is the type of string, see the types here https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type
-                    "required": true,
-                    "choices": [ //The possible choices for the options
-                        {
-                            "name": "Dog",
-                            "value": "animal_dog"
-                        },
-                        {
-                            "name": "Cat",
-                            "value": "animal_cat"
-                        },
-                        {
-                            "name": "Penguin",
-                            "value": "animal_penguin"
-                        }
-                    ]
-                },
-                {
-                    "name": "only_smol",
-                    "description": "Whether to show only baby animals",
-                    "type": Constants.ApplicationCommandOptionTypes.BOOLEAN,
-                    "required": false
-                }
-            ],
-            type: Constants.ApplicationCommandTypes.CHAT_INPUT //Not required for Chat input type, but recommended
-        }); //Create a chat input command
-
-        bot.createCommand({
-            name: "Test User Menu",
-            type: Constants.ApplicationCommandTypes.USER
-        }); //Create a user context menu
-
-        bot.createCommand({
-            name: "Test Message Menu",
-			description: "Testing message menu?",
-            type: Constants.ApplicationCommandTypes.MESSAGE
-        }); //Create a message context menu
-
-        bot.createCommand({
-            name: "test_edit_command",
-            description: "Test command to show off how to edit commands",
-            type: Constants.ApplicationCommandTypes.CHAT_INPUT //Not required for Chat input type, but recommended
-        }); //Create a chat input command
-
-        bot.createCommand({
-            name: "test_delete_command",
-            description: "Test command to show off how to delete commands",
-            type: Constants.ApplicationCommandTypes.CHAT_INPUT //Not required for Chat input type, but recommended
-        }); //Create a chat input command
-
-        //In practice, you should use bulkEditCommands if you need to create multiple commands
-    }
+// When the client is ready, run this code (only once)
+client.once('ready', () => {
+	console.log('Ready!');
 });
-bot.on("interactionCreate", (interaction) => {
-    if(interaction instanceof Eris.CommandInteraction) {
-        switch(interaction.data.name) {
-            case "test_edit_command":
-                interaction.createMessage("interaction recieved");
-                return bot.editCommand(interaction.data.id, {
-                    name: "edited_test_command",
-                    description: "Test command that was edited by running test_edit_command"
-                });
-            case "test_delete_command":
-                interaction.createMessage("interaction recieved");
-                return bot.deleteCommand(interaction.data.id);
-            default: {
-                return interaction.createMessage("interaction recieved");
-            }
-        }
-    }
-});
+const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
-bot.on('messageCreate', (message) => {
-	if (message.content === '!ping') {
-		console.log('got a ping?')
-		bot.createMessage(message.channel.id, 'Pong!');
-	} else if (message.content === '!Hello') {
-		bot.createMessage(message.channel.id, 'Choo choo! 🚅');
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isChatInputCommand()) return;
+
+	if (interaction.commandName === 'ping') {
+		// Create the modal
+		const modal = new ModalBuilder()
+			.setCustomId('myModal')
+			.setTitle('My Modal');
+
+		// Add components to modal
+
+		// Create the text input components
+		const favoriteColorInput = new TextInputBuilder()
+			.setCustomId('favoriteColorInput')
+		    // The label is the prompt the user sees for this input
+			.setLabel("What's your favorite color?")
+		    // Short means only a single line of text
+			.setStyle(TextInputStyle.Short);
+
+		const hobbiesInput = new TextInputBuilder()
+			.setCustomId('hobbiesInput')
+			.setLabel("What's some of your favorite hobbies?")
+		    // Paragraph means multiple lines of text.
+			.setStyle(TextInputStyle.Paragraph);
+
+		// An action row only holds one text input,
+		// so you need one action row per text input.
+		const firstActionRow = new ActionRowBuilder().addComponents(favoriteColorInput);
+		const secondActionRow = new ActionRowBuilder().addComponents(hobbiesInput);
+
+		// Add inputs to the modal
+		modal.addComponents(firstActionRow, secondActionRow);
+
+		// Show the modal to the user
+		await interaction.showModal(modal);
 	}
 });
+// Login to Discord with your client's token
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord.js');
+const fs = require('node:fs');
 
-bot.connect();
+const commands = [];
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+// Place your client and guild ids here
+const clientId = '1015961014740721684';
+const guildId = '1015376577103659080';
+
+for (const file of commandFiles) {
+	const command = require(`./commands/${file}`);
+	commands.push(command.data.toJSON());
+}
+
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+(async () => {
+	try {
+		console.log(`Started refreshing ${commands.length} application (/) commands.`);
+
+		const data = await rest.put(
+			Routes.applicationGuildCommands(clientId, guildId),
+			{ body: commands },
+		);
+
+		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+	} catch (error) {
+		console.error(error);
+	}
+})();
+client.login(process.env.DISCORD_TOKEN);
